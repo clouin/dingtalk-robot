@@ -10,22 +10,47 @@
 > **注意**：  
 > 如果你有大量发消息的场景（譬如系统监控报警）可以将这些信息进行整合，通过markdown消息以摘要的形式发送到群里。
 
-## docker
+## 如何使用
 
-### 编译docker镜像
+您可以使用基于环境变量或配置文件的方法来运行本项目。
 
-```bash
-sh build/package/build.sh jerryin/dingtalk-robot buildx
-```
+### 基于环境变量运行
 
-### 启动
+在运行项目之前，请确保您已经获取了钉钉自定义机器人的`access_token`和`secret`。然后，您可以通过以下命令来运行该项目：
 
 ```bash
 docker run -d --name dingtalk-robot --restart=unless-stopped -p 8080:8080 \
- -e ACCESS_TOKEN="your access_token" \
- -e SECRET="your secret" \
+ -e ACCESS_TOKEN="your dingtalk custom robot aaccess_token" \
+ -e SECRET="your dingtalk custom robot secret" \
+ -e LOG_LEVEL="info" \
  jerryin/dingtalk-robot
 ```
+
+| 变量名                   | 是否必填 | 说明                                              |
+|-------------------------|-------|----------------------------------------------------|
+| `ACCESS_TOKEN`          | 是    | 自定义机器人Webhook的`access_token` [自定义机器人官方说明](https://open.dingtalk.com/document/robots/custom-robot-access) |
+| `SECRET`                | 是    | 自定义机器人Webhook的加签`secret`                     |
+| `LOG_LEVEL`             | 否    | 日志级别，`debug`、`info`、`warning`、`error`。默认：`info`              |
+
+### 基于配置文件运行
+
+您还可以通过配置文件的方式来运行该项目。在运行项目之前，请确保您已经创建了一个配置文件，并将其挂载到Docker容器中。以下是一个示例配置文件：
+
+```yaml
+dingtalk:
+    access_token:
+    secret:
+log:
+    level: info
+```
+
+运行该项目的命令如下：
+
+```bash
+docker run -d --name dingtalk-robot --restart=unless-stopped -p 8080:8080 \
+ -v path/to/config.yaml:/config/config.yaml \
+ jerryin/dingtalk-robot
+ ```
 
 ## 调用
 
@@ -35,11 +60,8 @@ docker run -d --name dingtalk-robot --restart=unless-stopped -p 8080:8080 \
 curl -X POST 'http://127.0.0.1:8080/robot/send' \
  -H 'Content-Type: application/json' \
  -d '{
-    "msgtype": "text",
-    "content": "我就是我，@10086 是不一样的烟火",
-    "atMobiles": ["10086"],
-    "isAtAll": false
-    }'
+    "text": "简单文本"
+}'
 ```
 
 ### 消息类型及数据格式
@@ -49,9 +71,18 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 ```json
 {
     "msgtype": "text",
-    "content": "我就是我，@10086 是不一样的烟火",
-    "atMobiles": ["10086"],
-    "isAtAll": false
+    "text": {
+        "content": "我就是我, @XXX 是不一样的烟火"
+    },
+    "at": {
+        "atMobiles": [
+            "180xxxxxx"
+        ],
+        "atUserIds": [
+            "user123"
+        ],
+        "isAtAll": false
+    }
 }
 ```
 
@@ -66,11 +97,13 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 
 ```json
 {
-  "msgtype": "link",
-  "title": "时代的火车向前开",
-  "text": "这个即将发布的新版本，创始人xx称它为红树林。而在此之前，每当面临重大升级，产品经理们都会取一个应景的代号，这一次，为什么是红树林",
-  "messageUrl": "https://www.dingtalk.com/s?__biz=MzA4NjMwMTA2Ng==&mid=2650316842&idx=1&sn=60da3ea2b29f1dcc43a7c8e4a7c97a16&scene=2&srcid=09189AnRJEdIiWVaKltFzNTw&from=timeline&isappinstalled=0&key=&ascene=2&uin=&devicetype=android-23&version=26031933&nettype=WIFI",
-  "picUrl": ""
+    "msgtype": "link",
+    "link": {
+        "text": "这个即将发布的新版本，创始人xx称它为红树林。而在此之前，每当面临重大升级，产品经理们都会取一个应景的代号，这一次，为什么是红树林",
+        "title": "时代的火车向前开",
+        "picUrl": "",
+        "messageUrl": "https://www.dingtalk.com/s?__biz=MzA4NjMwMTA2Ng==&mid=2650316842&idx=1&sn=60da3ea2b29f1dcc43a7c8e4a7c97a16&scene=2&srcid=09189AnRJEdIiWVaKltFzNTw&from=timeline&isappinstalled=0&key=&ascene=2&uin=&devicetype=android-23&version=26031933&nettype=WIFI"
+    }
 }
 ```
 
@@ -82,16 +115,24 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 | messageUrl | String | 是    | 点击消息跳转的URL。        |
 | picUrl     | String | 否    | 图片URL。            |
 
-
 3. markdown类型
 
 ```json
 {
     "msgtype": "markdown",
-    "title": "杭州天气",
-    "text": "#### 杭州天气 @10086 \n > 9度，西北风1级，空气良89，相对温度73%\n > ![screenshot](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png)\n > ###### 10点20分发布 [天气](https://www.dingtalk.com) \n",
-    "atMobiles": ["10086"],
-    "isAtAll": false
+    "markdown": {
+        "title": "杭州天气",
+        "text": "#### 杭州天气 @150XXXXXXXX \n > 9度，西北风1级，空气良89，相对温度73%\n > ![screenshot](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png)\n > ###### 10点20分发布 [天气](https://www.dingtalk.com) \n"
+    },
+    "at": {
+        "atMobiles": [
+            "150XXXXXXXX"
+        ],
+        "atUserIds": [
+            "user123"
+        ],
+        "isAtAll": false
+    }
 }
 ```
 
@@ -141,11 +182,13 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 ```json
 {
     "msgtype": "actionCard",
-    "title": "乔布斯 20 年前想打造一间苹果咖啡厅，而它正是 Apple Store 的前身",
-    "text": "![screenshot](https://gw.alicdn.com/tfs/TB1ut3xxbsrBKNjSZFpXXcXhFXa-846-786.png) \n ### 乔布斯 20 年前想打造的苹果咖啡厅 \n Apple Store 的设计正从原来满满的科技感走向生活化，而其生活化的走向其实可以追溯到 20 年前苹果一个建立咖啡馆的计划",
-    "btnOrientation": "0",
-    "singleTitle": "阅读全文",
-    "singleURL": "https://www.dingtalk.com/"
+    "actionCard": {
+        "title": "乔布斯 20 年前想打造一间苹果咖啡厅，而它正是 Apple Store 的前身",
+        "text": "![screenshot](https://gw.alicdn.com/tfs/TB1ut3xxbsrBKNjSZFpXXcXhFXa-846-786.png) \n ### 乔布斯 20 年前想打造的苹果咖啡厅 \n Apple Store 的设计正从原来满满的科技感走向生活化，而其生活化的走向其实可以追溯到 20 年前苹果一个建立咖啡馆的计划",
+        "btnOrientation": "0",
+        "singleTitle": "阅读全文",
+        "singleURL": "https://www.dingtalk.com/"
+    }
 }
 ```
 
@@ -163,19 +206,21 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 ```json
 {
     "msgtype": "actionCard",
-    "title": "乔布斯 20 年前想打造一间苹果咖啡厅，而它正是 Apple Store 的前身",
-    "text": "![screenshot](https://gw.alicdn.com/tfs/TB1ut3xxbsrBKNjSZFpXXcXhFXa-846-786.png) \n ### 乔布斯 20 年前想打造的苹果咖啡厅 \n Apple Store 的设计正从原来满满的科技感走向生活化，而其生活化的走向其实可以追溯到 20 年前苹果一个建立咖啡馆的计划",
-    "btnOrientation": "0",
-    "btns": [
-        {
-            "title": "内容不错",
-            "actionURL": "https://www.dingtalk.com/"
-        },
-        {
-            "title": "不感兴趣",
-            "actionURL": "https://www.dingtalk.com/"
-        }
-    ]
+    "actionCard": {
+        "title": "我 20 年前想打造一间苹果咖啡厅，而它正是 Apple Store 的前身",
+        "text": "![screenshot](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png) \n\n #### 乔布斯 20 年前想打造的苹果咖啡厅 \n\n Apple Store 的设计正从原来满满的科技感走向生活化，而其生活化的走向其实可以追溯到 20 年前苹果一个建立咖啡馆的计划",
+        "btnOrientation": "0",
+        "btns": [
+            {
+                "title": "内容不错",
+                "actionURL": "https://www.dingtalk.com/"
+            },
+            {
+                "title": "不感兴趣",
+                "actionURL": "https://www.dingtalk.com/"
+            }
+        ]
+    }
 }
 ```
 
@@ -194,18 +239,20 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 ```json
 {
     "msgtype": "feedCard",
-    "links": [
-        {
-            "title": "时代的火车向前开1",
-            "messageURL": "https://www.dingtalk.com/",
-            "picURL": "https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png"
-        },
-        {
-            "title": "时代的火车向前开2",
-            "messageURL": "https://www.dingtalk.com/",
-            "picURL": "https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png"
-        }
-    ]
+    "feedCard": {
+        "links": [
+            {
+                "title": "时代的火车向前开1",
+                "messageURL": "https://www.dingtalk.com/",
+                "picURL": "https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png"
+            },
+            {
+                "title": "时代的火车向前开2",
+                "messageURL": "https://www.dingtalk.com/",
+                "picURL": "https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png"
+            }
+        ]
+    }
 }
 ```
 

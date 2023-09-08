@@ -2,27 +2,37 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
-	"dingtalk-robot/api/dingtalk"
+	"dingtalk-robot/config"
+	"dingtalk-robot/internal/robot"
 
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	config.LoadConfig()
+
+	// Logrus has seven logging levels: Trace, Debug, Info, Warning, Error, Fatal and Panic.
+	level, err := log.ParseLevel(config.Content.Log.Level)
+	if err == nil {
+		log.SetLevel(level)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+	log.Debugf(fmt.Sprintf("config.yaml: %+v", config.Content))
+}
 
 func robotSend(writer http.ResponseWriter, request *http.Request) {
 	//获取请求 request 的路由变量，返回 map [string]string
 	//vars := mux.Vars(request)
 
-	var req map[string]string
 	body, _ := ioutil.ReadAll(request.Body)
-	//解析json编码的数据并将结果存入req指向的值
-	json.Unmarshal(body, &req)
 
-	msgType := req["msgtype"]
-
-	resp := dingtalk.Request(msgType, body)
+	resp := robot.Request(body)
 
 	//编码函数
 	response, _ := json.Marshal(resp)

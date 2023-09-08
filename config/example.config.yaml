@@ -1,0 +1,6 @@
+dingtalk:
+  access_token:
+  secret:
+log:
+  # Log levels: debug, info, warning, error
+  level: info
