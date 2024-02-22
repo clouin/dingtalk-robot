@@ -74,6 +74,10 @@ func Request(jsonBytes []byte) dingtalk.Response {
 		reqString, resp, err = client.Send(&req)
 	default:
 		text := req["text"]
+		title := req["title"]
+		if title != "" {
+			text = fmt.Sprintf("%s\n\n%s", title, text)
+		}
 		if text != "" {
 			msg := dingtalk.NewTextMessage().SetContent(text)
 			reqString, resp, err = client.Send(msg)
