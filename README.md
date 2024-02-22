@@ -1,14 +1,14 @@
 # 钉钉机器人
 
-钉钉自定义机器人支持文本 (text)、链接 (link)、markdown、ActionCard、FeedCard消息类型
+钉钉自定义机器人支持文本 (text)、链接 (link)、markdown、ActionCard、FeedCard 消息类型
 
 [官方文档](https://open.dingtalk.com/document/robots/custom-robot-access)
 
 ## 调用频率限制
 
-> 每个机器人每分钟最多发送20条消息到群里，如果超过20条，会限流10分钟。  
-> **注意**：  
-> 如果你有大量发消息的场景（譬如系统监控报警）可以将这些信息进行整合，通过markdown消息以摘要的形式发送到群里。
+> 每个机器人每分钟最多发送 20 条消息到群里，如果超过 20 条，会限流 10 分钟。
+> **注意**：
+> 如果你有大量发消息的场景（譬如系统监控报警）可以将这些信息进行整合，通过 markdown 消息以摘要的形式发送到群里。
 
 ## 如何使用
 
@@ -20,21 +20,21 @@
 
 ```bash
 docker run -d --name dingtalk-robot --restart=unless-stopped -p 8080:8080 \
- -e ACCESS_TOKEN="your dingtalk custom robot aaccess_token" \
+ -e ACCESS_TOKEN="your dingtalk custom robot access_token" \
  -e SECRET="your dingtalk custom robot secret" \
  -e LOG_LEVEL="info" \
  jerryin/dingtalk-robot
 ```
 
-| 变量名                   | 是否必填 | 说明                                              |
-|-------------------------|-------|----------------------------------------------------|
-| `ACCESS_TOKEN`          | 是    | 自定义机器人Webhook的`access_token` [自定义机器人官方说明](https://open.dingtalk.com/document/robots/custom-robot-access) |
-| `SECRET`                | 是    | 自定义机器人Webhook的加签`secret`                     |
-| `LOG_LEVEL`             | 否    | 日志级别，`debug`、`info`、`warning`、`error`。默认：`info`              |
+| 变量名         | 是否必填 | 说明                                                                                                                        |
+| -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `ACCESS_TOKEN` | 是       | 自定义机器人 Webhook 的`access_token` [自定义机器人官方说明](https://open.dingtalk.com/document/robots/custom-robot-access) |
+| `SECRET`       | 是       | 自定义机器人 Webhook 的加签`secret`                                                                                         |
+| `LOG_LEVEL`    | 否       | 日志级别，`debug`、`info`、`warning`、`error`。默认：`info`                                                                 |
 
 ### 基于配置文件运行
 
-您还可以通过配置文件的方式来运行该项目。在运行项目之前，请确保您已经创建了一个配置文件，并将其挂载到Docker容器中。以下是一个示例配置文件：
+您还可以通过配置文件的方式来运行该项目。在运行项目之前，请确保您已经创建了一个配置文件，并将其挂载到 Docker 容器中。以下是一个示例配置文件：
 
 ```yaml
 dingtalk:
@@ -50,7 +50,7 @@ log:
 docker run -d --name dingtalk-robot --restart=unless-stopped -p 8080:8080 \
  -v path/to/config.yaml:/config/config.yaml \
  jerryin/dingtalk-robot
- ```
+```
 
 ## 调用
 
@@ -66,7 +66,7 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 
 ### 消息类型及数据格式
 
-1. text类型
+1. text 类型
 
 ```json
 {
@@ -75,25 +75,21 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
         "content": "我就是我, @XXX 是不一样的烟火"
     },
     "at": {
-        "atMobiles": [
-            "180xxxxxx"
-        ],
-        "atUserIds": [
-            "user123"
-        ],
+        "atMobiles": ["180xxxxxx"],
+        "atUserIds": ["user123"],
         "isAtAll": false
     }
 }
 ```
 
-| 参数        | 参数类型    | 是否必填 | 说明                                                          |
-|-----------|---------|------|-------------------------------------------------------------|
-| msgtype   | String  | 是    | 消息类型，此时固定为：`text`。                                            |
-| content   | String  | 是    | 消息内容。                                                       |
-| atMobiles | Array   | 否    | 被@人的手机号。 **注意**：在`content`里添加@人的手机号，且只有在群内的成员才可被@，非群内成员手机号会被脱敏。  |
-| isAtAll   | Boolean | 否    | 是否@所有人。                                                     |
+| 参数      | 参数类型 | 是否必填 | 说明                                                                                                          |
+| --------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| msgtype   | String   | 是       | 消息类型，此时固定为：`text`。                                                                                |
+| content   | String   | 是       | 消息内容。                                                                                                    |
+| atMobiles | Array    | 否       | 被@人的手机号。 **注意**：在`content`里添加@人的手机号，且只有在群内的成员才可被@，非群内成员手机号会被脱敏。 |
+| isAtAll   | Boolean  | 否       | 是否@所有人。                                                                                                 |
 
-2. link类型
+2. link 类型
 
 ```json
 {
@@ -107,15 +103,15 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 }
 ```
 
-| 参数         | 参数类型   | 是否必填 | 说明                |
-|------------|--------|------|-------------------|
-| msgtype    | String | 是    | 消息类型，此时固定为：`link`。  |
-| title      | String | 是    | 消息标题。             |
-| text       | String | 是    | 消息内容。如果太长只会部分展示。  |
-| messageUrl | String | 是    | 点击消息跳转的URL。        |
-| picUrl     | String | 否    | 图片URL。            |
+| 参数       | 参数类型 | 是否必填 | 说明                             |
+| ---------- | -------- | -------- | -------------------------------- |
+| msgtype    | String   | 是       | 消息类型，此时固定为：`link`。   |
+| title      | String   | 是       | 消息标题。                       |
+| text       | String   | 是       | 消息内容。如果太长只会部分展示。 |
+| messageUrl | String   | 是       | 点击消息跳转的 URL。             |
+| picUrl     | String   | 否       | 图片 URL。                       |
 
-3. markdown类型
+3. markdown 类型
 
 ```json
 {
@@ -125,26 +121,22 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
         "text": "#### 杭州天气 @150XXXXXXXX \n > 9度，西北风1级，空气良89，相对温度73%\n > ![screenshot](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png)\n > ###### 10点20分发布 [天气](https://www.dingtalk.com) \n"
     },
     "at": {
-        "atMobiles": [
-            "150XXXXXXXX"
-        ],
-        "atUserIds": [
-            "user123"
-        ],
+        "atMobiles": ["150XXXXXXXX"],
+        "atUserIds": ["user123"],
         "isAtAll": false
     }
 }
 ```
 
-| 参数        | 类型      | 是否必填 | 说明                                                       |
-|-----------|---------|------|----------------------------------------------------------|
-| msgtype   | String  | 是    | 消息类型，此时固定为：`markdown`。                                     |
-| title     | String  | 是    | 首屏会话透出的展示内容。                                             |
-| text      | String  | 是    | markdown格式的消息。                                           |
-| atMobiles | Array   | 否    | 被@人的手机号。 注意：在`text`内容里要有@人的手机号，只有在群内的成员才可被@，非群内成员手机号会被脱敏。  |
-| isAtAll   | Boolean | 否    | 是否@所有人。
+| 参数      | 类型    | 是否必填 | 说明                                                                                                     |
+| --------- | ------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| msgtype   | String  | 是       | 消息类型，此时固定为：`markdown`。                                                                       |
+| title     | String  | 是       | 首屏会话透出的展示内容。                                                                                 |
+| text      | String  | 是       | markdown 格式的消息。                                                                                    |
+| atMobiles | Array   | 否       | 被@人的手机号。 注意：在`text`内容里要有@人的手机号，只有在群内的成员才可被@，非群内成员手机号会被脱敏。 |
+| isAtAll   | Boolean | 否       | 是否@所有人。                                                                                            |
 
-目前只支持markdown语法的子集，具体支持的元素如下：
+目前只支持 markdown 语法的子集，具体支持的元素如下：
 
 ```
 标题
@@ -177,7 +169,7 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 2. item2
 ```
 
-4. 整体跳转ActionCard类型
+4. 整体跳转 ActionCard 类型
 
 ```json
 {
@@ -192,16 +184,16 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 }
 ```
 
-| 参数             | 类型     | 是否必填 | 说明                      |
-|----------------|--------|------|-------------------------|
-| msgtype        | String | 是    | 消息类型，此时固定为：`actionCard`。  |
-| title          | String | 是    | 首屏会话透出的展示内容。            |
-| text           | String | 是    | markdown格式的消息。          |
-| singleTitle    | String | 是    | 单个按钮的标题。                |
-| singleURL      | String | 是    | 点击消息跳转的URL。             |
-| btnOrientation | String | 否    | 0：按钮竖直排列；1：按钮横向排列       |
+| 参数           | 类型   | 是否必填 | 说明                                 |
+| -------------- | ------ | -------- | ------------------------------------ |
+| msgtype        | String | 是       | 消息类型，此时固定为：`actionCard`。 |
+| title          | String | 是       | 首屏会话透出的展示内容。             |
+| text           | String | 是       | markdown 格式的消息。                |
+| singleTitle    | String | 是       | 单个按钮的标题。                     |
+| singleURL      | String | 是       | 点击消息跳转的 URL。                 |
+| btnOrientation | String | 否       | 0：按钮竖直排列；1：按钮横向排列     |
 
-5. 独立跳转ActionCard类型
+5. 独立跳转 ActionCard 类型
 
 ```json
 {
@@ -224,17 +216,17 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 }
 ```
 
-| 参数             | 类型     | 是否必填 | 说明                   |
-|----------------|--------|------|----------------------|
-| msgtype        | String | 是    | 此消息类型为固定：`actionCard`。  |
-| title          | String | 是    | 首屏会话透出的展示内容。         |
-| text           | String | 是    | markdown格式的消息。       |
-| btns           | Array  | 是    | 按钮。                  |
-| title          | String | 是    | 按钮标题。                |
-| actionURL      | String | 是    | 点击按钮触发的URL。          |
-| btnOrientation | String | 否    | 0：按钮竖直排列；1：按钮横向排列    |
+| 参数           | 类型   | 是否必填 | 说明                             |
+| -------------- | ------ | -------- | -------------------------------- |
+| msgtype        | String | 是       | 此消息类型为固定：`actionCard`。 |
+| title          | String | 是       | 首屏会话透出的展示内容。         |
+| text           | String | 是       | markdown 格式的消息。            |
+| btns           | Array  | 是       | 按钮。                           |
+| title          | String | 是       | 按钮标题。                       |
+| actionURL      | String | 是       | 点击按钮触发的 URL。             |
+| btnOrientation | String | 否       | 0：按钮竖直排列；1：按钮横向排列 |
 
-5. FeedCard类型
+5. FeedCard 类型
 
 ```json
 {
@@ -256,9 +248,50 @@ curl -X POST 'http://127.0.0.1:8080/robot/send' \
 }
 ```
 
-| 参数         | 类型     | 是否必填 | 说明                 |
-|------------|--------|------|--------------------|
-| msgtype    | String | 是    | 此消息类型为固定：`feedCard`。  |
-| title      | String | 是    | 单条信息文本。            |
-| messageURL | String | 是    | 点击单条信息到跳转链接。       |
-| picURL     | String | 是    | 单条信息后面图片的URL。      |
+| 参数       | 类型   | 是否必填 | 说明                           |
+| ---------- | ------ | -------- | ------------------------------ |
+| msgtype    | String | 是       | 此消息类型为固定：`feedCard`。 |
+| title      | String | 是       | 单条信息文本。                 |
+| messageURL | String | 是       | 点击单条信息到跳转链接。       |
+| picURL     | String | 是       | 单条信息后面图片的 URL。       |
+
+## 举个例子
+
+[Watchtower](https://containrrr.dev/watchtower/) 用于自动更新 Docker 容器基础映像。Watchtower 可以在容器更新时发送通知，但是官方没有直接支持钉钉的 Webhook。
+
+本项目可以实现 Watchtower 发送通知钉钉。
+
+### docker-compose.yml 配置
+
+```yaml
+version: "3.8"
+
+services:
+    dingtalk-robot:
+        image: jerryin/dingtalk-robot
+        restart: always
+        expose:
+            - "8080"
+        environment:
+            - ACCESS_TOKEN=your dingtalk custom robot access_token
+            - SECRET=your dingtalk custom robot secret
+
+    watchtower:
+        depends_on:
+            - dingtalk-robot
+        image: containrrr/watchtower
+        restart: always
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        environment:
+            TZ: "Asia/Shanghai"
+            WATCHTOWER_NOTIFICATION_URL: "generic://dingtalk-robot:8080/robot/send?template=json&disabletls=yes&messagekey=text"
+            WATCHTOWER_NOTIFICATION_TEMPLATE: '{{range .}}{{.Time.Format "2006-01-02 15:04:05"}} ({{.Level}}): {{.Message}}{{println}}{{end}}'
+        command: --cleanup --schedule "0 0 4 * * *"
+```
+
+### 运行
+
+```bash
+docker-compose up -d
+```
