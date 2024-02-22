@@ -48,6 +48,8 @@ func Request(jsonBytes []byte) dingtalk.Response {
 	var req map[string]string
 	//解析json编码的数据并将结果存入req指向的值
 	json.Unmarshal(jsonBytes, &req)
+	log.Debugf("request body: %+v", req)
+
 	msgType := dingtalk.MsgType(req["msgtype"])
 	switch msgType {
 	case dingtalk.MsgTypeText:

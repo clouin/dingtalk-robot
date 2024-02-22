@@ -6,7 +6,7 @@ COPY . /build/
 RUN go mod tidy && go build -o app main.go
 
 FROM alpine:3.17
-MAINTAINER Jerry
+LABEL maintainer = Jerry
 
 RUN apk add tzdata && \
 	cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \

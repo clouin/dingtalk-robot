@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
-	"dingtalk-robot/internal/security"
+	"dingtalk-robot/dingtalk/security"
 )
 
 // Client dingtalk client
@@ -63,7 +63,7 @@ func (d *Client) Send(message Message) (string, *Response, error) {
 	}
 	defer resp.Body.Close()
 
-	resultByte, err := ioutil.ReadAll(resp.Body)
+	resultByte, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return reqString, res, err
 	}

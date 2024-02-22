@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"dingtalk-robot/config"
-	"dingtalk-robot/internal/robot"
+	"dingtalk-robot/dingtalk/robot"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -30,7 +30,7 @@ func robotSend(writer http.ResponseWriter, request *http.Request) {
 	//获取请求 request 的路由变量，返回 map [string]string
 	//vars := mux.Vars(request)
 
-	body, _ := ioutil.ReadAll(request.Body)
+	body, _ := io.ReadAll(request.Body)
 
 	resp := robot.Request(body)
 
