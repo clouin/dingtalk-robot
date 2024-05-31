@@ -40,12 +40,17 @@ func robotSend(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
 	writer.Write(response)
+}
 
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("DingTalk robot is running"))
 }
 
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/robot/send", robotSend).Methods("POST")
+	r.HandleFunc("/", healthCheck).Methods("GET")
 
 	log.Printf("start listening on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
