@@ -8,6 +8,7 @@ import (
 
 	"dingtalk-robot/config"
 	"dingtalk-robot/dingtalk/robot"
+	"dingtalk-robot/diun"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -42,6 +43,19 @@ func robotSend(writer http.ResponseWriter, request *http.Request) {
 	writer.Write(response)
 }
 
+func diunWebhook(writer http.ResponseWriter, request *http.Request) {
+	body, _ := io.ReadAll(request.Body)
+
+	resp := diun.ProcessDiunEvent(body)
+
+	//编码函数
+	response, _ := json.Marshal(resp)
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	writer.Write(response)
+}
+
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("DingTalk robot is running"))
@@ -50,6 +64,7 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/robot/send", robotSend).Methods("POST")
+	r.HandleFunc("/diun/webhook", diunWebhook).Methods("POST")
 	r.HandleFunc("/", healthCheck).Methods("GET")
 
 	log.Printf("start listening on http://localhost:8080")
