@@ -1,12 +1,16 @@
-FROM golang:1.19.5-alpine as builder
+FROM golang:1.27.3-alpine3.24 AS builder
 
 WORKDIR /build
+COPY go.mod go.sum ./
+
+RUN go mod download
+
 COPY . /build/
 
-RUN go mod tidy && go build -o app main.go
+RUN CGO_ENABLED=0 go build -mod=readonly -trimpath -ldflags="-s -w" -o app .
 
-FROM alpine:3.17
-LABEL maintainer = Jerry
+FROM alpine:3.24.2
+LABEL maintainer="Jerry"
 
 RUN apk add --no-cache curl tzdata && \
 	cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \

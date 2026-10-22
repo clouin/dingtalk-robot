@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -23,7 +22,7 @@ func init() {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-	log.Debugf(fmt.Sprintf("config.yaml: %+v", config.Content))
+	log.Debugf("config.yaml: %+v", config.Content)
 }
 
 func robotSend(writer http.ResponseWriter, request *http.Request) {
