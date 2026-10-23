@@ -2,44 +2,23 @@ package dingtalk
 
 import "encoding/json"
 
-// LinkMessage link message struct
+// LinkMessage 是 link 类型消息。link 不支持 at。
 type LinkMessage struct {
 	MsgType MsgType `json:"msgtype"`
 	Link    Link    `json:"link"`
 }
 
-// Link link struct
+// Link 是 link 消息体。
 type Link struct {
 	Title      string `json:"title"`
 	Text       string `json:"text"`
-	PicURL     string `json:"picUrl"`
+	PicURL     string `json:"picUrl,omitempty"`
 	MessageURL string `json:"messageUrl"`
 }
 
-// ToByte to byte
-func (m *LinkMessage) ToByte() ([]byte, error) {
+// MarshalJSON 序列化并强制写入 msgtype，不修改接收者。
+func (m LinkMessage) MarshalJSON() ([]byte, error) {
 	m.MsgType = MsgTypeLink
-	jsonByte, err := json.Marshal(m)
-	return jsonByte, err
-}
-
-// NewLinkMessage new message
-func NewLinkMessage() *LinkMessage {
-	msg := LinkMessage{}
-	return &msg
-}
-
-// SetLink set link
-func (m *LinkMessage) SetLink(
-	title string,
-	text string,
-	picURL string,
-	messageURL string) *LinkMessage {
-	m.Link = Link{
-		Title:      title,
-		Text:       text,
-		PicURL:     picURL,
-		MessageURL: messageURL,
-	}
-	return m
+	type wire LinkMessage
+	return json.Marshal(wire(m))
 }

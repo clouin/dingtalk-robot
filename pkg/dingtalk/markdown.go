@@ -2,46 +2,22 @@ package dingtalk
 
 import "encoding/json"
 
-// MarkdownMessage markdown message struct
+// MarkdownMessage 是 markdown 类型消息。
 type MarkdownMessage struct {
 	MsgType  MsgType  `json:"msgtype"`
 	Markdown Markdown `json:"markdown"`
-	At       At       `json:"at"`
+	At       *At      `json:"at,omitempty"`
 }
 
-// Markdown markdown struct
+// Markdown 是 markdown 消息体。
 type Markdown struct {
 	Title string `json:"title"`
 	Text  string `json:"text"`
 }
 
-// ToByte to byte
-func (m *MarkdownMessage) ToByte() ([]byte, error) {
+// MarshalJSON 序列化并强制写入 msgtype，不修改接收者。
+func (m MarkdownMessage) MarshalJSON() ([]byte, error) {
 	m.MsgType = MsgTypeMarkdown
-	jsonByte, err := json.Marshal(m)
-	return jsonByte, err
-}
-
-// NewMarkdownMessage new message
-func NewMarkdownMessage() *MarkdownMessage {
-	msg := MarkdownMessage{}
-	return &msg
-}
-
-// SetMarkdown set markdown
-func (m *MarkdownMessage) SetMarkdown(title string, text string) *MarkdownMessage {
-	m.Markdown = Markdown{
-		Title: title,
-		Text:  text,
-	}
-	return m
-}
-
-// SetAt set at
-func (m *MarkdownMessage) SetAt(atMobiles []string, isAtAll bool) *MarkdownMessage {
-	m.At = At{
-		AtMobiles: atMobiles,
-		IsAtAll:   isAtAll,
-	}
-	return m
+	type wire MarkdownMessage
+	return json.Marshal(wire(m))
 }

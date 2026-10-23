@@ -2,44 +2,21 @@ package dingtalk
 
 import "encoding/json"
 
-// TextMessage text message struct
+// TextMessage 是 text 类型消息。
 type TextMessage struct {
 	MsgType MsgType `json:"msgtype"`
 	Text    Text    `json:"text"`
-	At      At      `json:"at"`
+	At      *At     `json:"at,omitempty"`
 }
 
-// Text text struct
+// Text 是 text 消息体。
 type Text struct {
 	Content string `json:"content"`
 }
 
-// ToByte to byte
-func (m *TextMessage) ToByte() ([]byte, error) {
+// MarshalJSON 序列化并强制写入 msgtype，不修改接收者。
+func (m TextMessage) MarshalJSON() ([]byte, error) {
 	m.MsgType = MsgTypeText
-	jsonByte, err := json.Marshal(m)
-	return jsonByte, err
-}
-
-// NewTextMessage new message
-func NewTextMessage() *TextMessage {
-	msg := TextMessage{}
-	return &msg
-}
-
-// SetContent set content
-func (m *TextMessage) SetContent(content string) *TextMessage {
-	m.Text = Text{
-		Content: content,
-	}
-	return m
-}
-
-// SetAt set at
-func (m *TextMessage) SetAt(atMobiles []string, isAtAll bool) *TextMessage {
-	m.At = At{
-		AtMobiles: atMobiles,
-		IsAtAll:   isAtAll,
-	}
-	return m
+	type wire TextMessage
+	return json.Marshal(wire(m))
 }

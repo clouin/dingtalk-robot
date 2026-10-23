@@ -1,6 +1,46 @@
+# 复制为 config.yaml 后按需填写。
+# 除 read_timeout / write_timeout / idle_timeout 三项外，其余键都可用环境变量覆盖（环境变量优先）。
+provider: custom # custom = 自定义机器人 Webhook；enterprise = 企业内部应用机器人；选型与配置见 docs/channels.md
+
+server:
+  addr: ":8080"
+  # 入口访问令牌，客户端需带 Authorization: Bearer <token>。
+  # 留空时必须显式设置 allow_unauthenticated: true，否则进程拒绝启动。
+  api_token:
+  allow_unauthenticated: false
+  max_body_bytes: 65536
+  read_header_timeout: 5s
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 60s
+  shutdown_timeout: 15s
+
 dingtalk:
-  access_token:
-  secret:
+  custom:
+    access_token:
+    # 机器人安全设置为"加签"时必填；使用关键词或 IP 白名单时留空。
+    secret:
+  enterprise:
+    client_id:
+    client_secret:
+    robot_code:
+    open_conversation_id:
+    # 企业通道不支持 @，开启后会丢弃 at 字段并在响应中标记 at_dropped。
+    ignore_at: false
+
+# 出站限流：上限按通道取值。custom 的官方上限是每机器人 20 条/分钟（超限封禁 10 分钟）；
+# enterprise 走服务端 API 的基础频率限制，分钟级阈值 1500 条（实际配额可能更低）。
+rate_limit:
+  enabled: true
+  per_minute: 18 # custom 不得超过 20；enterprise 不得超过 1500
+  burst: 3
+  strategy: wait # wait = 排队压平突发；reject = 立即返回 429
+
+send:
+  timeout: 10s
+  retries: 2
+  backoff_base: 200ms
+
 log:
-  # Log levels: debug, info, warning, error
-  level: info
+  level: info # debug / info / warn / error
+  format: text # text = 单行 key=value（默认，容器日志友好）；json = 结构化采集
