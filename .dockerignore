@@ -1,0 +1,6 @@
+# 构建上下文只需要源码与示例配置：本地凭据、版本控制数据与本地产物不应进入
+# 镜像的中间层缓存。刻意不排除 config/ 目录——镜像里的默认配置来自
+# config/example.config.yaml。
+.git
+.github
+config/config.yaml
