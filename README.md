@@ -1,297 +1,90 @@
-# 钉钉机器人
+# 钉钉机器人转发服务
 
-钉钉自定义机器人支持文本 (text)、链接 (link)、markdown、ActionCard、FeedCard 消息类型
+把一次 HTTP POST 转发到钉钉群，给 Watchtower、CI、监控系统这类只会发 Webhook 的工具用。
 
-[官方文档](https://open.dingtalk.com/document/robots/custom-robot-access)
+- 一个二进制、一个容器，无数据库、无外部依赖
+- 两条投递通道（自定义机器人 / 企业内部应用机器人），同一套入参
+- 入口 Bearer 鉴权、请求体限额、出站限流、按错误分类重试、结构化日志、Prometheus 指标、优雅停机
 
-## 调用频率限制
+## 快速开始
 
-> 每个机器人每分钟最多发送 20 条消息到群里，如果超过 20 条，会限流 10 分钟。
-> **注意**：
-> 如果你有大量发消息的场景（譬如系统监控报警）可以将这些信息进行整合，通过 markdown 消息以摘要的形式发送到群里。
-
-## 如何使用
-
-您可以使用基于环境变量或配置文件的方法来运行本项目。
-
-### 基于环境变量运行
-
-在运行项目之前，请确保您已经获取了钉钉自定义机器人的`access_token`和`secret`。然后，您可以通过以下命令来运行该项目：
+生成入口令牌并记下来——容器重建时要复用同一个值：
 
 ```bash
-docker run -d --name dingtalk-robot --restart=unless-stopped -p 8080:8080 \
- -e ACCESS_TOKEN="your dingtalk custom robot access_token" \
- -e SECRET="your dingtalk custom robot secret" \
- -e LOG_LEVEL="info" \
- jerryin/dingtalk-robot
+export API_TOKEN="$(openssl rand -hex 16)"
 ```
 
-| 变量名         | 是否必填 | 说明                                                                                                                        |
-| -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `ACCESS_TOKEN` | 是       | 自定义机器人 Webhook 的`access_token` [自定义机器人官方说明](https://open.dingtalk.com/document/robots/custom-robot-access) |
-| `SECRET`       | 是       | 自定义机器人 Webhook 的加签`secret`                                                                                         |
-| `LOG_LEVEL`    | 否       | 日志级别，`debug`、`info`、`warning`、`error`。默认：`info`                                                                 |
-
-### 基于配置文件运行
-
-您还可以通过配置文件的方式来运行该项目。在运行项目之前，请确保您已经创建了一个配置文件，并将其挂载到 Docker 容器中。以下是一个示例配置文件：
-
-```yaml
-dingtalk:
-    access_token:
-    secret:
-log:
-    level: info
-```
-
-运行该项目的命令如下：
+启动（示例只把端口发布到本机回环地址，容器内仍监听 `:8080`）：
 
 ```bash
-docker run -d --name dingtalk-robot --restart=unless-stopped -p 8080:8080 \
- -v path/to/config.yaml:/config/config.yaml \
- jerryin/dingtalk-robot
+docker run -d --name dingtalk-robot --restart=unless-stopped \
+  -p 127.0.0.1:8080:8080 \
+  -e API_TOKEN="$API_TOKEN" \
+  -e DINGTALK_ACCESS_TOKEN="<自定义机器人 access_token>" \
+  -e DINGTALK_SECRET="<加签 secret，未加签留空>" \
+  jerryin/dingtalk-robot
 ```
 
-## 调用
-
-### 测试用例
+发一条消息：
 
 ```bash
-curl -X POST 'http://127.0.0.1:8080/robot/send' \
- -H 'Content-Type: application/json' \
- -d '{
-    "text": "简单文本"
-}'
+curl -X POST http://127.0.0.1:8080/v1/messages \
+  -H "Authorization: Bearer $API_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"hello"}'
 ```
-
-### 消息类型及数据格式
-
-1. text 类型
 
 ```json
-{
-    "msgtype": "text",
-    "text": {
-        "content": "我就是我, @XXX 是不一样的烟火"
-    },
-    "at": {
-        "atMobiles": ["180xxxxxx"],
-        "atUserIds": ["user123"],
-        "isAtAll": false
-    }
-}
+{ "ok": true, "errmsg": "ok", "errcode": 0, "request_id": "8ba25b9e5dfb4576", "provider": "custom" }
 ```
 
-| 参数      | 参数类型 | 是否必填 | 说明                                                                                                          |
-| --------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| msgtype   | String   | 是       | 消息类型，此时固定为：`text`。                                                                                |
-| content   | String   | 是       | 消息内容。                                                                                                    |
-| atMobiles | Array    | 否       | 被@人的手机号。 **注意**：在`content`里添加@人的手机号，且只有在群内的成员才可被@，非群内成员手机号会被脱敏。 |
-| isAtAll   | Boolean  | 否       | 是否@所有人。                                                                                                 |
+`API_TOKEN` 必填，缺失时进程直接退出；确实需要匿名访问时设 `SERVER_ALLOW_UNAUTHENTICATED=true`。失败先从[排障决策树](https://github.com/clouin/dingtalk-robot/blob/master/docs/operations.md#排障决策树)入手。
 
-2. link 类型
+## 选择通道
 
-```json
-{
-    "msgtype": "link",
-    "link": {
-        "text": "这个即将发布的新版本，创始人xx称它为红树林。而在此之前，每当面临重大升级，产品经理们都会取一个应景的代号，这一次，为什么是红树林",
-        "title": "时代的火车向前开",
-        "picUrl": "",
-        "messageUrl": "https://www.dingtalk.com/s?__biz=MzA4NjMwMTA2Ng==&mid=2650316842&idx=1&sn=60da3ea2b29f1dcc43a7c8e4a7c97a16&scene=2&srcid=09189AnRJEdIiWVaKltFzNTw&from=timeline&isappinstalled=0&key=&ascene=2&uin=&devicetype=android-23&version=26031933&nettype=WIFI"
-    }
-}
-```
+|              | `custom`                                    | `enterprise`                                                               |
+| ------------ | ------------------------------------------- | -------------------------------------------------------------------------- |
+| 凭据         | webhook `access_token`（可选加签 `secret`） | 企业应用 `client_id`/`client_secret`、`robot_code`、`open_conversation_id` |
+| 目标群       | webhook 所属的那一个群                      | `open_conversation_id` 指向的那一个群                                      |
+| 官方限速口径 | 每机器人 20 条/分钟，超限封禁 10 分钟       | 服务端 API 频率限制（每应用每接口 40 次/秒、1500 次/分）                   |
 
-| 参数       | 参数类型 | 是否必填 | 说明                             |
-| ---------- | -------- | -------- | -------------------------------- |
-| msgtype    | String   | 是       | 消息类型，此时固定为：`link`。   |
-| title      | String   | 是       | 消息标题。                       |
-| text       | String   | 是       | 消息内容。如果太长只会部分展示。 |
-| messageUrl | String   | 是       | 点击消息跳转的 URL。             |
-| picUrl     | String   | 否       | 图片 URL。                       |
+默认 `custom`：一条 webhook 就够。需要企业凭据体系、或无法在群里放 webhook 时选 `enterprise`；完整能力差异与取 `open_conversation_id` 的方法见[投递通道](https://github.com/clouin/dingtalk-robot/blob/master/docs/channels.md)。
 
-3. markdown 类型
+## 接口
 
-```json
-{
-    "msgtype": "markdown",
-    "markdown": {
-        "title": "杭州天气",
-        "text": "#### 杭州天气 @150XXXXXXXX \n > 9度，西北风1级，空气良89，相对温度73%\n > ![screenshot](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png)\n > ###### 10点20分发布 [天气](https://www.dingtalk.com) \n"
-    },
-    "at": {
-        "atMobiles": ["150XXXXXXXX"],
-        "atUserIds": ["user123"],
-        "isAtAll": false
-    }
-}
-```
+| 方法   | 路径           | 说明                         |
+| ------ | -------------- | ---------------------------- |
+| `POST` | `/v1/messages` | 发送消息                     |
+| `GET`  | `/healthz`     | 存活探针，不依赖上游         |
+| `GET`  | `/readyz`      | 就绪探针，停机排空时返回 503 |
+| `GET`  | `/metrics`     | Prometheus 指标              |
 
-| 参数      | 类型    | 是否必填 | 说明                                                                                                     |
-| --------- | ------- | -------- | -------------------------------------------------------------------------------------------------------- |
-| msgtype   | String  | 是       | 消息类型，此时固定为：`markdown`。                                                                       |
-| title     | String  | 是       | 首屏会话透出的展示内容。                                                                                 |
-| text      | String  | 是       | markdown 格式的消息。                                                                                    |
-| atMobiles | Array   | 否       | 被@人的手机号。 注意：在`text`内容里要有@人的手机号，只有在群内的成员才可被@，非群内成员手机号会被脱敏。 |
-| isAtAll   | Boolean | 否       | 是否@所有人。                                                                                            |
+`/healthz`、`/readyz` 不需要令牌；其余路径都要 `Authorization: Bearer <token>`。完整契约、错误码与响应头见[接口契约](https://github.com/clouin/dingtalk-robot/blob/master/docs/api.md)。
 
-目前只支持 markdown 语法的子集，具体支持的元素如下：
+## 文档
 
-```
-标题
-# 一级标题
-## 二级标题
-### 三级标题
-#### 四级标题
-##### 五级标题
-###### 六级标题
+| 文档                                                                                                    | 内容                                 |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| [配置](https://github.com/clouin/dingtalk-robot/blob/master/docs/configuration.md)                      | 26 个配置键、优先级、启动期校验      |
+| [接口契约](https://github.com/clouin/dingtalk-robot/blob/master/docs/api.md)                            | 请求/响应、错误码、客户端重试建议    |
+| [投递通道](https://github.com/clouin/dingtalk-robot/blob/master/docs/channels.md)                       | 选型、凭据、能力差异、上游失败特征   |
+| [部署](https://github.com/clouin/dingtalk-robot/blob/master/docs/deploy.md)                             | 镜像形态、Compose、K8s、多副本、回滚 |
+| [观测与排障](https://github.com/clouin/dingtalk-robot/blob/master/docs/operations.md)                   | 日志字段、指标、告警、决策树         |
+| [开发](https://github.com/clouin/dingtalk-robot/blob/master/docs/development.md)                        | 测试、构建、CI、扩展点               |
+| [Watchtower 接入](https://github.com/clouin/dingtalk-robot/blob/master/docs/integrations/watchtower.md) | 更新通知转发示例                     |
 
-引用
-> A man who stands for nothing will fall for anything.
+## 部署要点
 
-文字加粗、斜体
-**bold**
-*italic*
+- 镜像以非 root（UID 65532）运行，内置 `HEALTHCHECK`（进程自身的 `-healthcheck` 子命令），默认时区 `Asia/Shanghai`。
+- 镜像自带 `/config/config.yaml`（示例配置的空值版本），用环境变量或挂载覆盖；配置只读挂载即可。
+- Kubernetes 探针可直接用 `/healthz` 与 `/readyz`；滚动更新、多副本与限流的注意事项见[部署](https://github.com/clouin/dingtalk-robot/blob/master/docs/deploy.md)。
 
-链接
-[this is a link](http://name.com)
+## 安全须知
 
-图片
-![](http://name.com/pic.jpg)
+- 令牌只通过环境变量或 Secret 注入，不要写进镜像、镜像 tag 或提交到仓库。
+- 对外必须经过带 HTTPS 的反向代理，不要直接把 8080 开到公网；`disabletls=yes` 只适用于可信内网。
+- 服务只接受 `Authorization` 头，不接受查询串令牌；配置转储中的凭据已做掩码。
 
-无序列表
-- item1
-- item2
+## 版本与许可
 
-有序列表
-1. item1
-2. item2
-```
-
-4. 整体跳转 ActionCard 类型
-
-```json
-{
-    "msgtype": "actionCard",
-    "actionCard": {
-        "title": "乔布斯 20 年前想打造一间苹果咖啡厅，而它正是 Apple Store 的前身",
-        "text": "![screenshot](https://gw.alicdn.com/tfs/TB1ut3xxbsrBKNjSZFpXXcXhFXa-846-786.png) \n ### 乔布斯 20 年前想打造的苹果咖啡厅 \n Apple Store 的设计正从原来满满的科技感走向生活化，而其生活化的走向其实可以追溯到 20 年前苹果一个建立咖啡馆的计划",
-        "btnOrientation": "0",
-        "singleTitle": "阅读全文",
-        "singleURL": "https://www.dingtalk.com/"
-    }
-}
-```
-
-| 参数           | 类型   | 是否必填 | 说明                                 |
-| -------------- | ------ | -------- | ------------------------------------ |
-| msgtype        | String | 是       | 消息类型，此时固定为：`actionCard`。 |
-| title          | String | 是       | 首屏会话透出的展示内容。             |
-| text           | String | 是       | markdown 格式的消息。                |
-| singleTitle    | String | 是       | 单个按钮的标题。                     |
-| singleURL      | String | 是       | 点击消息跳转的 URL。                 |
-| btnOrientation | String | 否       | 0：按钮竖直排列；1：按钮横向排列     |
-
-5. 独立跳转 ActionCard 类型
-
-```json
-{
-    "msgtype": "actionCard",
-    "actionCard": {
-        "title": "我 20 年前想打造一间苹果咖啡厅，而它正是 Apple Store 的前身",
-        "text": "![screenshot](https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png) \n\n #### 乔布斯 20 年前想打造的苹果咖啡厅 \n\n Apple Store 的设计正从原来满满的科技感走向生活化，而其生活化的走向其实可以追溯到 20 年前苹果一个建立咖啡馆的计划",
-        "btnOrientation": "0",
-        "btns": [
-            {
-                "title": "内容不错",
-                "actionURL": "https://www.dingtalk.com/"
-            },
-            {
-                "title": "不感兴趣",
-                "actionURL": "https://www.dingtalk.com/"
-            }
-        ]
-    }
-}
-```
-
-| 参数           | 类型   | 是否必填 | 说明                             |
-| -------------- | ------ | -------- | -------------------------------- |
-| msgtype        | String | 是       | 此消息类型为固定：`actionCard`。 |
-| title          | String | 是       | 首屏会话透出的展示内容。         |
-| text           | String | 是       | markdown 格式的消息。            |
-| btns           | Array  | 是       | 按钮。                           |
-| title          | String | 是       | 按钮标题。                       |
-| actionURL      | String | 是       | 点击按钮触发的 URL。             |
-| btnOrientation | String | 否       | 0：按钮竖直排列；1：按钮横向排列 |
-
-5. FeedCard 类型
-
-```json
-{
-    "msgtype": "feedCard",
-    "feedCard": {
-        "links": [
-            {
-                "title": "时代的火车向前开1",
-                "messageURL": "https://www.dingtalk.com/",
-                "picURL": "https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png"
-            },
-            {
-                "title": "时代的火车向前开2",
-                "messageURL": "https://www.dingtalk.com/",
-                "picURL": "https://img.alicdn.com/tfs/TB1NwmBEL9TBuNjy1zbXXXpepXa-2400-1218.png"
-            }
-        ]
-    }
-}
-```
-
-| 参数       | 类型   | 是否必填 | 说明                           |
-| ---------- | ------ | -------- | ------------------------------ |
-| msgtype    | String | 是       | 此消息类型为固定：`feedCard`。 |
-| title      | String | 是       | 单条信息文本。                 |
-| messageURL | String | 是       | 点击单条信息到跳转链接。       |
-| picURL     | String | 是       | 单条信息后面图片的 URL。       |
-
-## 举个例子
-
-[Watchtower](https://containrrr.dev/watchtower/) 用于自动更新 Docker 容器基础映像。Watchtower 可以在容器更新时发送通知，但是官方没有直接支持钉钉的 Webhook。
-
-本项目可以实现 Watchtower 发送通知钉钉。
-
-### docker-compose.yml 配置
-
-```yaml
-version: "3.8"
-
-services:
-    dingtalk-robot:
-        image: jerryin/dingtalk-robot
-        restart: always
-        expose:
-            - "8080"
-        environment:
-            - ACCESS_TOKEN=your dingtalk custom robot access_token
-            - SECRET=your dingtalk custom robot secret
-
-    watchtower:
-        depends_on:
-            - dingtalk-robot
-        image: containrrr/watchtower
-        restart: always
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-        environment:
-            TZ: "Asia/Shanghai"
-            WATCHTOWER_NOTIFICATION_URL: "generic://dingtalk-robot:8080/robot/send?template=json&disabletls=yes&messagekey=text"
-            WATCHTOWER_NOTIFICATION_TEMPLATE: '{{range .}}{{.Time.Format "2006-01-02 15:04:05"}} ({{.Level}}): {{.Message}}{{println}}{{end}}'
-        command: --cleanup --schedule "0 0 4 * * *"
-```
-
-### 运行
-
-```bash
-docker-compose up -d
-```
+`-version` 打印构建版本。许可证：[MIT](LICENSE)。
